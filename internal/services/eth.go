@@ -2,8 +2,13 @@ package services
 
 import (
     "context"
-    "github.com/ethereum/go-ethereum/ethclient"
+    "fmt"
     "log"
+    "math/big"
+
+    "github.com/ethereum/go-ethereum/core/types"
+    "github.com/ethereum/go-ethereum/ethclient"
+    "github.com/Jenniferosei/go-blockchain-service/internal/db"
 )
 
 type EthService struct {
@@ -33,4 +38,19 @@ func (e *EthService) GetClientVersion() string {
         return "unknown"
     }
     return v.String()
+}
+
+// FetchAndStoreBlock fetches a block by number from the Ethereum node and stores it in Postgres.
+func (e *EthService) FetchAndStoreBlock(ctx context.Context, blockNumber int64) (*types.Block, error) {
+    block, err := e.Client.BlockByNumber(ctx, big.NewInt(blockNumber))
+    if err != nil {
+        return nil, fmt.Errorf("failed to fetch block: %w", err)
+    }
+
+    err = db.StoreBlock(ctx, block)
+    if err != nil {
+        return nil, fmt.Errorf("failed to store block in DB: %w", err)
+    }
+
+    return block, nil
 }
